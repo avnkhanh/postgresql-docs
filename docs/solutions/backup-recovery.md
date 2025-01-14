@@ -96,4 +96,4 @@ The architecture consists of three server instances:
 
 ### Deployment
 
-Refer to the [Deploying backup and disaster recovery solution in Percona Distribution for PostgreSQL](dr-pgbackrest-setup.md) tutorial.  
+Refer to the [Deploying backup and disaster recovery solution in Percona Distribution for PostgreSQL](dr-pgbackrest-setup.md) tutorial. 

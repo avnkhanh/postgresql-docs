@@ -8,9 +8,9 @@ As the example configuration, we will use the nodes with the following IP addres
 
 | **Node name**   | **Internal IP address** |
 | --------------- | ----------------------- |
-| pg-primary      | 10.104.0.3              |
-| pg-repo         | 10.104.0.5              |
-| pg-secondary    | 10.104.0.4              |
+| pg-primary      | 192.168.55.114          |
+| pg-repo         | 192.168.55.115          |
+| pg-secondary    | 192.168.55.116          |
 
 ### Set up hostnames
 
@@ -40,7 +40,7 @@ In our architecture, the `pgBackRest` repository is located on a remote host. To
     ```
     127.0.1.1 pg-primary pg-primary
     127.0.0.1 localhost
-    10.104.0.5 pg-repo
+    192.168.55.115 pg-repo
     ```
 
    The `/etc/hosts` file in the `pg-repo` node looks like this:
@@ -48,8 +48,8 @@ In our architecture, the `pgBackRest` repository is located on a remote host. To
     ```
     127.0.1.1 pg-repo pg-repo
     127.0.0.1 localhost
-    10.104.0.3 pg-primary
-    10.104.0.4 pg-secondary
+    192.168.55.114 pg-primary
+    192.168.55.116 pg-secondary
     ```
 
    The `/etc/hosts` file in the `pg-secondary` node is shown below:
@@ -57,8 +57,8 @@ In our architecture, the `pgBackRest` repository is located on a remote host. To
     ```
     127.0.1.1 pg-secondary pg-secondary
     127.0.0.1 localhost
-    10.104.0.3 pg-primary
-    10.104.0.5 pg-repo
+    192.168.55.114 pg-primary
+    192.168.55.115 pg-repo
     ```
 
 ### Set up passwordless SSH
@@ -68,7 +68,7 @@ Before setting up passwordless SSH, ensure that the _postgres_ user in all three
 1. To set or change the password, run the following command **as a root user**:
 
     ```{.bash data-prompt="$"}
-    $ passwd postgres
+    passwd postgres
     ```
 
 2. Type the new password and confirm it. 
@@ -82,7 +82,7 @@ Before setting up passwordless SSH, ensure that the _postgres_ user in all three
 4. In the `pg-repo` node, restart the `sshd` service. Without the restart, the SSH server will not allow you to connect to it using a password while adding the keys.
 
     ```{.bash data-prompt="$"}
-    $ sudo service sshd restart
+    sudo service sshd restart
     ```
 
 
@@ -95,7 +95,7 @@ Before setting up passwordless SSH, ensure that the _postgres_ user in all three
     * Generate SSH keys:   
 
         ```{.bash data-prompt="$"}
-        $ ssh-keygen -t rsa
+        ssh-keygen -t rsa
         Generating public/private rsa key pair.
         Enter file in which to save the key (/root/.ssh/id_rsa): 
         Enter passphrase (empty for no passphrase): 
@@ -109,7 +109,7 @@ Before setting up passwordless SSH, ensure that the _postgres_ user in all three
     * Copy the public key to the `pg-repo` node:
 
         ```{.bash data-prompt="$"}
-        $ ssh-copy-id -i ~/.ssh/id_rsa.pub postgres@pg-repo
+        ssh-copy-id -i ~/.ssh/id_rsa.pub postgres@pg-repo
         /usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/root/.ssh/id_rsa.pub"
         /usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
         /usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed -- if you are prompted now it is to install the new keys
@@ -125,7 +125,7 @@ Before setting up passwordless SSH, ensure that the _postgres_ user in all three
 6. To verify everything has worked as expected, run the following command from the `pg-primary` node. 
 
     ```{.bash data-prompt="$"}
-    $ ssh postgres@pg-repo
+    ssh postgres@pg-repo
     ```
 
     You should be able to connect to the `pg-repo` terminal without a password.
@@ -141,7 +141,7 @@ Install Percona Distribution for PostgreSQL in the primary and the secondary nod
 2. Enable the repository:
 
     ```{.bash data-prompt="$"}
-    $ sudo percona-release setup ppg16
+    sudo percona-release setup ppg16
     ```
 
 3. Install Percona Distribution for PostgreSQL packages
@@ -149,13 +149,13 @@ Install Percona Distribution for PostgreSQL in the primary and the secondary nod
     === ":material-debian: On Debian and Ubuntu"
 
          ```{.bash data-prompt="$"}
-         $ sudo apt install percona-postgresql-16 -y
+         sudo apt install percona-postgresql-16 -y
          ```
    
     === ":material-redhat: On RedHat Enterprise Linux and derivatives"
 
          ```{.bash data-prompt="$"}
-         $ sudo yum install percona-postgresql16-server
+         sudo yum install percona-postgresql16-server
          ```
 
 ### Configure PostgreSQL on the primary node for continuous backup
@@ -183,7 +183,7 @@ At this step, configure the PostgreSQL instance on the `pg-primary` node for con
 2. Once the changes are saved, restart PostgreSQL.
 
     ```{.bash data-prompt="$"}
-    $ sudo systemctl restart postgresql
+    sudo systemctl restart postgresql
     ```
 
 ### Install pgBackRest
@@ -193,13 +193,13 @@ Install `pgBackRest` in all three instances from Percona repository. Use the fol
 === ":material-debian: On Debian / Ubuntu"
   
      ```{.bash data-prompt="$"}
-     $ sudo apt-get install percona-pgbackrest
+     sudo apt-get install percona-pgbackrest
      ```
 
 === ":material-redhat: On RHEL / derivatives"
 
      ```{.bash data-prompt="$"}
-     $ sudo yum install percona-pgbackrest
+     sudo yum install percona-pgbackrest
      ```
 
 ### Create the `pgBackRest` configuration file
@@ -209,20 +209,20 @@ Run the following commands on all three nodes to set up the required configurati
 1. Configure a location and permissions for the `pgBackRest` log rotation:
  
      ```{.bash data-prompt="$"}
-     $ sudo mkdir -p -m 770 /var/log/pgbackrest
-     $ sudo chown postgres:postgres /var/log/pgbackrest
+     sudo mkdir -p -m 770 /var/log/pgbackrest
+     sudo chown postgres:postgres /var/log/pgbackrest
      ```
 
 2. Configure the location and permissions for the `pgBackRest` configuration file:
 
    ```{.bash data-prompt="$"}
-   $ sudo mkdir -p /etc/pgbackrest
-   $ sudo mkdir -p /etc/pgbackrest/conf.d
-   $ sudo touch /etc/pgbackrest/pgbackrest.conf
-   $ sudo chmod 640 /etc/pgbackrest/pgbackrest.conf
-   $ sudo chown postgres:postgres /etc/pgbackrest/pgbackrest.conf
-   $ sudo mkdir -p /home/pgbackrest
-   $ sudo chmod postgres:postgres /home/pgbackrest
+   sudo mkdir -p /etc/pgbackrest
+   sudo mkdir -p /etc/pgbackrest/conf.d
+   sudo touch /etc/pgbackrest/pgbackrest.conf
+   sudo chmod 640 /etc/pgbackrest/pgbackrest.conf
+   sudo chown postgres:postgres /etc/pgbackrest/pgbackrest.conf
+   sudo mkdir -p /home/pgbackrest
+   sudo chmod postgres:postgres /home/pgbackrest
    ```
 
 ### Update `pgBackRest` configuration file in the primary node
@@ -273,7 +273,7 @@ After the configuration files are set up, it’s now time to initialize the `pgB
 
 
 ```{.bash data-prompt="$"}
-$ sudo -u postgres pgbackrest --stanza=prod_backup stanza-create
+sudo -u postgres pgbackrest --stanza=prod_backup stanza-create
 2021-11-07 11:08:18.157 P00   INFO: stanza-create command begin 2.36: --exec-id=155883-2277a3e7 --log-level-console=info --log-level-file=off --pg1-host=pg-primary --pg1-host-user=postgres --pg1-path=/var/lib/postgresql/14/main --pg1-port=5432 --repo1-path=/home/pgbackrest/pg_backup --stanza=prod_backup
 2021-11-07 11:08:19.453 P00   INFO: stanza-create for stanza 'prod_backup' on repo1
 2021-11-07 11:08:19.566 P00   INFO: stanza-create command end: completed successfully (1412ms)
@@ -304,7 +304,7 @@ This section covers a few use cases where `pgBackRest` can back up and restore d
 
 
 ```{.bash data-prompt="$"}
-$ pgbackrest -u postgres  --stanza=prod_backup backup --type=full
+pgbackrest -u postgres  --stanza=prod_backup backup --type=full
 ```
 
 
@@ -313,7 +313,7 @@ If you want an incremental backup, you can omit the `type` attribute. By default
 If you need a differential backup,  use _diff_ for the `type` field:
 
 ```{.bash data-prompt="$"}
-$ pgbackrest -u postgres --stanza=prod_backup backup --type=diff
+pgbackrest -u postgres --stanza=prod_backup backup --type=diff
 ```
 
 ### Use Case 2: Restore a PostgreSQL Instance from a full backup
@@ -324,7 +324,7 @@ For testing purposes, let's "damage" the PostgreSQL instance.
 
     
     ```{.bash data-prompt="$"}
-    $ rm -rf /var/lib/postgresql/14/main/*
+    rm -rf /var/lib/postgresql/14/main/*
     ```
 
 2. To restore the backup, run the following commands. 
@@ -332,19 +332,19 @@ For testing purposes, let's "damage" the PostgreSQL instance.
     * Stop the `postgresql` instance
 
        ```{.bash data-prompt="$"}
-       $ sudo systemctl stop postgresql
+       sudo systemctl stop postgresql
        ```
 
     * Restore the backup:
 
        ```{.bash data-prompt="$"}
-       $ pgbackrest -u postgres --stanza=prod_backup restore
+       pgbackrest -u postgres --stanza=prod_backup restore
        ```
 
     * Start the `postgresql` instance
 
        ```{.bash data-prompt="$"}
-       $ sudo systemctl start postgresql
+       sudo systemctl start postgresql
        ```
 
 
@@ -385,13 +385,13 @@ To test this use case, do the following:
     * Stop the `postgresql` instance
 
        ```{.bash data-prompt="$"}
-       $ sudo systemctl stop postgresql
+       sudo systemctl stop postgresql
        ```
 
     * Restore the backup
 
        ```{.bash data-prompt="$"}
-       $ pgbackrest -u postgres --stanza=prod_backup --delta \
+       pgbackrest -u postgres --stanza=prod_backup --delta \
        --type=time "--target= 2021-11-07 11:55:47.952405+00" \
        --target-action=promote restore
        ```
@@ -399,7 +399,7 @@ To test this use case, do the following:
     * Start the `postgresql` instance
 
        ```{.bash data-prompt="$"}
-       $ sudo systemctl start postgresql
+       sudo systemctl start postgresql
        ```
 
 
@@ -443,13 +443,13 @@ There should be bidirectional passwordless SSH communication between `pg-repo` a
 Stop the PostgreSQL instance
 
 ```{.bash data-prompt="$"}
-$ sudo systemctl stop postgresql
+sudo systemctl stop postgresql
 ```
 
 Restore the database backup from `pg-repo` to `pg-secondary`.
 
 ```{.bash data-prompt="$"}
-$ pgbackrest -u postgres --stanza=prod_backup --delta restore
+pgbackrest -u postgres --stanza=prod_backup --delta restore
 
 2021-11-07 13:34:08.897 P00   INFO: restore command begin 2.36: --delta --exec-id=109728-d81c7b0b --log-level-console=info --log-level-file=debug --pg1-path=/var/lib/postgresql/14/main --process-max=2 --repo1-host=pg-repo --repo1-host-user=postgres --stanza=prod_backup
 2021-11-07 13:34:09.784 P00   INFO: repo1: restore backup set 20211107-111534F_20211107-131807I, recovery will start at 2021-11-07 13:18:07
@@ -463,7 +463,7 @@ $ pgbackrest -u postgres --stanza=prod_backup --delta restore
 After the restore completes successfully, restart PostgreSQL:
 
 ```{.bash data-prompt="$"}
-$ sudo systemctl start postgresql
+sudo systemctl start postgresql
 ```
 
 
