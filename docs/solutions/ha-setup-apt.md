@@ -341,6 +341,24 @@ Run the following commands on all nodes. You can do this in parallel:
 	NAMESPACE="pnc_namespace"
 	SCOPE="postgres_scope"
 	```
+    * Phải tạo unix_socket_directories riêng , nếu không reboot là mất
+	```{.bash data-prompt="$"}	
+	mkdir -p /etc/postgresql/unix_socket
+	chmod 750 /etc/postgresql/unix_socket
+	chown postgres:postgres /etc/postgresql/unix_socket
+	```
+	
+    * Kiểm tra unix_socket
+	```{.bash data-prompt="$"}	
+	ls /etc/postgresql/unix_socket/.s.PGSQL.5432
+	```
+	
+	* Tạo folder để lưu pgpass tạm thời
+	```{.bash data-prompt="$"}	
+	sudo mkdir -p /etc/patroni
+	sudo chown postgres:postgres /etc/patroni
+	sudo chmod 750 /etc/patroni
+	```
 
 2. Use the following command to create the `/etc/patroni/patroni.yml` configuration file and add the following configuration for `111pgsql`:
 
@@ -413,7 +431,7 @@ Run the following commands on all nodes. You can do this in parallel:
         connect_address: ${NODE_IP}:5432
         data_dir: ${DATA_DIR}
         bin_dir: ${PG_BIN_DIR}
-        pgpass: /tmp/pgpass0
+        pgpass: /etc/patroni/pgpass
         authentication:
             replication:
                 username: replicator
@@ -422,7 +440,7 @@ Run the following commands on all nodes. You can do this in parallel:
                 username: postgres
                 password: p0stGres123
         parameters:
-            unix_socket_directories: "/var/run/postgresql/"
+            unix_socket_directories: "/etc/postgresql/unix_socket/"
         create_replica_methods:
             - basebackup
         basebackup:
@@ -450,33 +468,23 @@ Run the following commands on all nodes. You can do this in parallel:
    If it's **not created**, create it manually and specify the following contents within:
 
     ```ini title="/etc/systemd/system/percona-patroni.service"
-    [Unit]
-     Description=Runners to orchestrate a high-availability PostgreSQL
-     After=syslog.target network.target 
+	[Unit]
+	Description=Runners to orchestrate a high-availability PostgreSQL
+	After=syslog.target network.target
 
-     [Service]
-     Type=simple 
+	[Service]
+	Type=simple
+	User=postgres
+	Group=postgres
+	ExecStart=/bin/patroni /etc/patroni/patroni.yml
+	ExecReload=/bin/kill -s HUP $MAINPID
+	KillMode=process
+	TimeoutSec=30
+	Restart=no
 
-     User=postgres
-     Group=postgres 
+	[Install]
+	WantedBy=multi-user.target
 
-     # Start the patroni process
-     ExecStart=/bin/patroni /etc/patroni/patroni.yml 
-
-     # Send HUP to reload from patroni.yml
-     ExecReload=/bin/kill -s HUP $MAINPID 
-
-     # only kill the patroni process, not its children, so it will gracefully stop postgres
-     KillMode=process 
-
-     # Give a reasonable amount of time for the server to start up/shut down
-     TimeoutSec=30 
-
-     # Do not restart the service if it crashes, we want to manually inspect database on failure
-     Restart=no 
-
-     [Install]
-     WantedBy=multi-user.target
     ```
 
 4. Make systemd aware of the new service:
@@ -548,7 +556,7 @@ This way, a client application doesn’t know what node in the underlying cluste
 1. Install HAProxy on the `110pgsqlha` node:
 
     ```{.bash data-prompt="$"}
-    sudo apt install percona-haproxy
+    sudo apt install haproxy -y
     ```
 
 2. The HAProxy configuration file path is: `/etc/haproxy/haproxy.cfg`. Specify the following configuration in this file.
