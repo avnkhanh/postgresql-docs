@@ -232,7 +232,25 @@ We will configure and start all etcd nodes in parallel. This can be done either 
 
     During the node start, etcd searches for other cluster nodes defined in the configuration. If the other nodes are not yet running, the start may fail by a quorum timeout. This is expected behavior. Try starting all nodes again at the same time for the etcd cluster to be created.
 
---8<-- "check-etcd.md"
+    * Thiết lập biến môi trường và kiểm tra cụm etcd
+    ```
+	export ETCDCTL_API=3
+	HOST_1=192.168.55.111
+	HOST_2=192.168.55.112
+	HOST_3=192.168.55.113
+	ENDPOINTS=$HOST_1:2379,$HOST_2:2379,$HOST_3:2379
+    ```
+
+    * Kiểm tra thành viên cụm:
+    ```
+	sudo etcdctl --endpoints=$ENDPOINTS -w table member list
+    ```
+
+
+    * Kiểm tra node leader
+    ```
+	sudo etcdctl --endpoints=$ENDPOINTS -w table endpoint status
+    ```
 
 ### Method 2. Start etcd nodes with command line options
 
@@ -288,7 +306,25 @@ We will configure and start all etcd nodes in parallel. This can be done either 
         	--initial-cluster-state ${CLUSTER_STATE} --initial-cluster-token ${TOKEN}
         ```
 
---8<-- "check-etcd.md"
+    * Thiết lập biến môi trường và kiểm tra cụm etcd
+    ```
+	export ETCDCTL_API=3
+	HOST_1=192.168.55.111
+	HOST_2=192.168.55.112
+	HOST_3=192.168.55.113
+	ENDPOINTS=$HOST_1:2379,$HOST_2:2379,$HOST_3:2379
+    ```
+
+    * Kiểm tra thành viên cụm:
+    ```
+	sudo etcdctl --endpoints=$ENDPOINTS -w table member list
+    ```
+
+
+    * Kiểm tra node leader
+    ```
+	sudo etcdctl --endpoints=$ENDPOINTS -w table endpoint status
+    ```
 
 ## Configure Patroni
 
@@ -296,33 +332,15 @@ Run the following commands on all nodes. You can do this in parallel:
 
 1. Export and create environment variables to simplify the config file creation:
 
-    * Node name:
-
-       ```{.bash data-prompt="$"}
-       export NODE_NAME=`hostname -f`
-       ```
-
-    * Node IP:
-
-       ```{.bash data-prompt="$"}
-       export NODE_IP=`hostname -i | awk '{print $1}'`
-       ```
-   
-    * Create variables to store the PATH:
-
-       ```bash
-       DATA_DIR="/var/lib/postgresql/16/main"
-       PG_BIN_DIR="/usr/lib/postgresql/16/bin"
-       ```
-
-       **NOTE**: Check the path to the data and bin folders on your operating system and change it for the variables accordingly.
-
-    * Patroni information:
-
-       ```bash
-       NAMESPACE="percona_lab"
-       SCOPE="cluster_1"
-       ```
+    * Xuất và tạo các biến môi trường để đơn giản hóa việc tạo tệp cấu hình:
+	```{.bash data-prompt="$"}	
+	export NODE_NAME=`hostname -f`
+	export NODE_IP=`hostname -i | awk '{print $1}'`
+	DATA_DIR="/var/lib/postgresql/16/main"
+	PG_BIN_DIR="/usr/lib/postgresql/16/bin"
+	NAMESPACE="pnc_namespace"
+	SCOPE="postgres_scope"
+	```
 
 2. Use the following command to create the `/etc/patroni/patroni.yml` configuration file and add the following configuration for `111pgsql`:
 
@@ -361,7 +379,9 @@ Run the following commands on all nodes. You can do this in parallel:
                   max_wal_size: '10GB'
                   archive_mode: "on"
                   archive_timeout: 600s
-                  archive_command: "cp -f %p /home/postgres/archived/%f"
+                  archive_command: pgbackrest --stanza=cluster_1 archive-push /var/lib/postgresql/16/main/pg_wal/%f
+              recovery_conf:
+                  restore_command: pgbackrest --config=/etc/pgbackrest/pgbackrest.conf --stanza=cluster_1 archive-get %f %p
 
       # some desired options for 'initdb'
       initdb: # Note: It needs to be a list (some options need values, others are switches)
@@ -377,12 +397,12 @@ Run the following commands on all nodes. You can do this in parallel:
       # Some additional users which needs to be created after initializing new cluster
       users:
           admin:
-              password: qaz123
+              password: s2Min123
               options:
                   - createrole
                   - createdb
           percona:
-              password: qaz123
+              password: perc0n2123
               options:
                   - createrole
                   - createdb 
@@ -397,10 +417,10 @@ Run the following commands on all nodes. You can do this in parallel:
         authentication:
             replication:
                 username: replicator
-                password: replPasswd
+                password: replP2sswd
             superuser:
                 username: postgres
-                password: qaz123
+                password: p0stGres123
         parameters:
             unix_socket_directories: "/var/run/postgresql/"
         create_replica_methods:
@@ -570,7 +590,7 @@ This way, a client application doesn’t know what node in the underlying cluste
         server 111pgsql 111pgsql:5432 maxconn 100 check port 8008
         server 112pgsql 112pgsql:5432 maxconn 100 check port 8008
         server 113pgsql 113pgsql:5432 maxconn 100 check port 8008
-    
+		
     ```
 
 
