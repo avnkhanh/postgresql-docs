@@ -105,22 +105,28 @@ Run the following commands on `111pgsql`, `112pgsql` and `113pgsql`:
 
 1. Install Percona Distribution for PostgreSQL
     
-    * Disable the upstream `postgresql-{{pgversion}}` package.
+    * Disable the upstream `postgresql-16` package.
 
     * Install the `percona-release` repository management tool
-
-        --8<-- "percona-release-apt.md"
+    
+    ```{.bash data-prompt="$"}
+    sudo apt install -y wget curl lsb-release nfs-common net-tools
+	curl -O https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+	chmod 644 /root/percona-release_latest.generic_all.deb
+	sudo apt install -y gnupg2 lsb-release ./percona-release_latest.generic_all.deb
+	sudo apt update
+    ```
 
     * Enable the repository
 
         ```{.bash data-prompt="$"}
-        sudo percona-release setup ppg{{pgversion}}
+        sudo percona-release setup ppg16
         ```   
 
     * Install Percona Distribution for PostgreSQL package
 
         ```{.bash data-prompt="$"}
-        sudo apt install percona-postgresql-{{pgversion}}
+        sudo apt install percona-postgresql-16
         ```
 
 2. Install some Python and auxiliary packages to help with Patroni and etcd
@@ -507,7 +513,7 @@ sudo psql -U postgres
 The command output is the following:
 
 ```
-psql ({{pgversion}})
+psql (16)
 Type "help" for help.
 
 postgres=#
