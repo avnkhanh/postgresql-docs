@@ -12,7 +12,7 @@ This guide provides instructions on how to set up a highly available PostgreSQL 
 2. For this setup, we will use the nodes running on Ubuntu 22.04 as the base operating system:
 
 | Node         | Components                           | IP Address       |
-|--------------|======================================|------------------|
+|--------------|--------------------------------------|------------------|
 | 111pgsql     | PostgreSQL + Patroni + etcd          | 192.168.55.111   |
 | 112pgsql     | PostgreSQL + Patroni + etcd          | 192.168.55.112   |
 | 113pgsql     | PostgreSQL + Patroni + etcd          | 192.168.55.113   |
