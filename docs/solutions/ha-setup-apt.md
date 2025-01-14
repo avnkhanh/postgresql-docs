@@ -495,13 +495,13 @@ When Patroni starts, it initializes PostgreSQL (because the service is not curre
     The output resembles the following:
 
     ```{.text .no-copy}
-    + Cluster: cluster_1 (7440127629342136675) -----+----+-------+
-    | Member | Host       | Role    | State     | TL | Lag in MB |
-    +--------+------------+---------+-----------+----+-----------+
-    | 111pgsql  | 10.0.100.1 | Leader  | running   |  1 |           |
-    | 112pgsql  | 10.0.100.2 | Replica | streaming |  1 |         0 |
-    | 113pgsql  | 10.0.100.3 | Replica | streaming |  1 |         0 |
-    +--------+------------+---------+-----------+----+-----------+
+    + Cluster: cluster_1 (7440127629342136675) --------+----+-----------+
+    | Member    | Host           | Role    | State     | TL | Lag in MB |
+    +-----------+----------------+---------+-----------+----+-----------+
+    | 111pgsql  | 192.168.55.111 | Leader  | running   |  1 |           |
+    | 112pgsql  | 192.168.55.112 | Replica | streaming |  1 |         0 |
+    | 113pgsql  | 192.168.55.113 | Replica | streaming |  1 |         0 |
+    +-----------+----------------+---------+-----------+----+-----------+
     ```
 
 If Patroni has started properly, you should be able to locally connect to a PostgreSQL node using the following command:
