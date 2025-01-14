@@ -11,14 +11,12 @@ This guide provides instructions on how to set up a highly available PostgreSQL 
 
 2. For this setup, we will use the nodes running on Ubuntu 22.04 as the base operating system:
 
-
-| Node name     | Public IP address | Internal IP address
-|---------------|-------------------|--------------------
-| node1         | 157.230.42.174    | 10.104.0.7
-| node2         | 68.183.177.183    | 10.104.0.2
-| node3         | 165.22.62.167     | 10.104.0.8
-| HAProxy-demo  | 134.209.111.138   | 10.104.0.6
-
+| Node         | Components                           | IP Address       |
+|--------------|======================================|------------------|
+| 111pgsql     | PostgreSQL + Patroni + etcd          | 192.168.55.111   |
+| 112pgsql     | PostgreSQL + Patroni + etcd          | 192.168.55.112   |
+| 113pgsql     | PostgreSQL + Patroni + etcd          | 192.168.55.113   |
+| 110pgsqlha   | HAProxy load balancer                | 192.168.55.110   |
 
 !!! note
 
@@ -32,78 +30,78 @@ Configure every node.
 
 It's not necessary to have name resolution, but it makes the whole setup more readable and less error prone. Here, instead of configuring a DNS, we use a local name resolution by updating the file `/etc/hosts`. By resolving their hostnames to their IP addresses, we make the nodes aware of each other's names and allow their seamless communication. 
 
-=== "node1"   
+=== "111pgsql"   
 
     1. Set up the hostname for the node
 
         ```{.bash data-prompt="$"}
-        $ sudo hostnamectl set-hostname node1
+        $ sudo hostnamectl set-hostname 111pgsql
         ```
 
     2. Modify the `/etc/hosts` file to include the hostnames and IP addresses of the remaining nodes. Add the following at the end of the `/etc/hosts` file on all nodes:   
 
         ```text hl_lines="3 4"
         # Cluster IP and names 
-        10.104.0.1 node1 
-        10.104.0.2 node2 
-        10.104.0.3 node3
+        192.168.55.111 111pgsql 
+        192.168.55.112 112pgsql 
+        192.168.55.113 113pgsql
         ```    
 
-=== "node2"    
+=== "112pgsql"    
 
     1. Set up the hostname for the node
 
         ```{.bash data-prompt="$"}
-        $ sudo hostnamectl set-hostname node2
+        $ sudo hostnamectl set-hostname 112pgsql
         ```
 
     2. Modify the `/etc/hosts` file to include the hostnames and IP addresses of the remaining nodes. Add the following at the end of the `/etc/hosts` file on all nodes:   
 
         ```text hl_lines="2 4"
         # Cluster IP and names 
-        10.104.0.1 node1 
-        10.104.0.2 node2 
-        10.104.0.3 node3
+        192.168.55.111 111pgsql 
+        192.168.55.112 112pgsql 
+        192.168.55.113 113pgsql
         ```    
 
-=== "node3"    
+=== "113pgsql"    
 
     1. Set up the hostname for the node
 
         ```{.bash data-prompt="$"}
-        $ sudo hostnamectl set-hostname node3
+        $ sudo hostnamectl set-hostname 113pgsql
         ```
 
     2. Modify the `/etc/hosts` file to include the hostnames and IP addresses of the remaining nodes. Add the following at the end of the `/etc/hosts` file on all nodes:   
 
         ```text hl_lines="2 3"
         # Cluster IP and names 
-        10.104.0.1 node1 
-        10.104.0.2 node2 
-        10.104.0.3 node3
+        192.168.55.111 111pgsql 
+        192.168.55.112 112pgsql 
+        192.168.55.113 113pgsql
         ```    
 
-=== "HAproxy-demo"  
+=== "110pgsqlha"  
 
     1. Set up the hostname for the node
 
         ```{.bash data-prompt="$"}
-        $ sudo hostnamectl set-hostname HAProxy-demo
+        $ sudo hostnamectl set-hostname 110pgsqlha
         ```
 
     2. Modify the `/etc/hosts` file. The HAProxy instance should have the name resolution for all the three nodes in its `/etc/hosts` file. Add the following lines at the end of the file:    
 
         ```text hl_lines="3 4 5"
         # Cluster IP and names
-        10.104.0.6 HAProxy-demo
-        10.104.0.1 node1
-        10.104.0.2 node2
-        10.104.0.3 node3
+        192.168.55.110 110pgsqlha
+        192.168.55.111 111pgsql
+        192.168.55.112 112pgsql
+        192.168.55.113 113pgsql
         ```
 
 ### Install the software
 
-Run the following commands on `node1`, `node2` and `node3`:
+Run the following commands on `111pgsql`, `112pgsql` and `113pgsql`:
 
 1. Install Percona Distribution for PostgreSQL
     
@@ -175,46 +173,46 @@ We will configure and start all etcd nodes in parallel. This can be done either 
 
 1. Create the etcd configuration file on every node. You can edit the sample configuration file `/etc/etcd/etcd.conf.yaml` or create your own one. Replace the node names and IP addresses with the actual names and IP addresses of your nodes.
 
-    === "node1"
+    === "111pgsql"
 
          ```yaml title="/etc/etcd/etcd.conf.yaml"
-         name: 'node1'
+         name: '111pgsql'
          initial-cluster-token: PostgreSQL_HA_Cluster_1
          initial-cluster-state: new
-         initial-cluster: node1=http://10.104.0.1:2380,node2=http://10.104.0.2:2380,node3=http://10.104.0.3:2380
+         initial-cluster: 111pgsql=http://192.168.55.111:2380,112pgsql=http://192.168.55.112:2380,113pgsql=http://192.168.55.113:2380
          data-dir: /var/lib/etcd
-         initial-advertise-peer-urls: http://10.104.0.1:2380 
-         listen-peer-urls: http://10.104.0.1:2380
-         advertise-client-urls: http://10.104.0.1:2379
-         listen-client-urls: http://10.104.0.1:2379
+         initial-advertise-peer-urls: http://192.168.55.111:2380 
+         listen-peer-urls: http://192.168.55.111:2380
+         advertise-client-urls: http://192.168.55.111:2379
+         listen-client-urls: http://192.168.55.111:2379
          ```
 
-    === "node2"
+    === "112pgsql"
 
          ```yaml title="/etc/etcd/etcd.conf.yaml"
-         name: 'node2'
+         name: '112pgsql'
          initial-cluster-token: PostgreSQL_HA_Cluster_1
          initial-cluster-state: new
-         initial-cluster: node1=http://10.104.0.1:2380,node2=http://10.104.0.2:2380,     node3=http://10.104.0.3:2380
+         initial-cluster: 111pgsql=http://192.168.55.111:2380,112pgsql=http://192.168.55.112:2380,     113pgsql=http://192.168.55.113:2380
          data-dir: /var/lib/etcd
-         initial-advertise-peer-urls: http://10.104.0.2:2380 
-         listen-peer-urls: http://10.104.0.2:2380
-         advertise-client-urls: http://10.104.0.2:2379
-         listen-client-urls: http://10.104.0.2:2379
+         initial-advertise-peer-urls: http://192.168.55.112:2380 
+         listen-peer-urls: http://192.168.55.112:2380
+         advertise-client-urls: http://192.168.55.112:2379
+         listen-client-urls: http://192.168.55.112:2379
          ```
 
-    === "node3"
+    === "113pgsql"
 
          ```yaml title="/etc/etcd/etcd.conf.yaml"
-         name: 'node3'
+         name: '113pgsql'
          initial-cluster-token: PostgreSQL_HA_Cluster_1
          initial-cluster-state: new
-         initial-cluster: node1=http://10.104.0.1:2380,node2=http://10.104.0.2:2380,     node3=http://10.104.0.3:2380
+         initial-cluster: 111pgsql=http://192.168.55.111:2380,112pgsql=http://192.168.55.112:2380,     113pgsql=http://192.168.55.113:2380
          data-dir: /var/lib/etcd
-         initial-advertise-peer-urls: http://10.104.0.3:2380 
-         listen-peer-urls: http://10.104.0.3:2380
-         advertise-client-urls: http://10.104.0.3:2379
-         listen-client-urls: http://10.104.0.3:2379
+         initial-advertise-peer-urls: http://192.168.55.113:2380 
+         listen-peer-urls: http://192.168.55.113:2380
+         advertise-client-urls: http://192.168.55.113:2379
+         listen-client-urls: http://192.168.55.113:2379
          ```
 
 2. Enable and start the `etcd` service on all nodes:
@@ -236,18 +234,18 @@ We will configure and start all etcd nodes in parallel. This can be done either 
     ```
     TOKEN=PostgreSQL_HA_Cluster_1
     CLUSTER_STATE=new
-    NAME_1=node1
-    NAME_2=node2
-    NAME_3=node3
-    HOST_1=10.104.0.1
-    HOST_2=10.104.0.2
-    HOST_3=10.104.0.3
+    NAME_1=111pgsql
+    NAME_2=112pgsql
+    NAME_3=113pgsql
+    HOST_1=192.168.55.111
+    HOST_2=192.168.55.112
+    HOST_3=192.168.55.113
     CLUSTER=${NAME_1}=http://${HOST_1}:2380,${NAME_2}=http://${HOST_2}:2380,${NAME_3}=http://${HOST_3}:2380
     ```
 
 2. Start each etcd node in parallel using the following command:
 
-    === "node1"
+    === "111pgsql"
 
         ```{.bash data-prompt="$"}
         THIS_NAME=${NAME_1}
@@ -259,7 +257,7 @@ We will configure and start all etcd nodes in parallel. This can be done either 
         	--initial-cluster-state ${CLUSTER_STATE} --initial-cluster-token ${TOKEN}
         ```
 
-    === "node2"
+    === "112pgsql"
 
         ```{.bash data-prompt="$"}
         THIS_NAME=${NAME_2}
@@ -271,7 +269,7 @@ We will configure and start all etcd nodes in parallel. This can be done either 
         	--initial-cluster-state ${CLUSTER_STATE} --initial-cluster-token ${TOKEN}
         ```
 
-    === "node3"
+    === "113pgsql"
 
         ```{.bash data-prompt="$"}
         THIS_NAME=${NAME_3}
@@ -319,7 +317,7 @@ Run the following commands on all nodes. You can do this in parallel:
        SCOPE="cluster_1"
        ```
 
-2. Use the following command to create the `/etc/patroni/patroni.yml` configuration file and add the following configuration for `node1`:
+2. Use the following command to create the `/etc/patroni/patroni.yml` configuration file and add the following configuration for `111pgsql`:
 
     ```bash
     echo "
@@ -461,7 +459,7 @@ Run the following commands on all nodes. You can do this in parallel:
     ```
 
 5. Repeat steps 1-4 on the remaining nodes. In the end you must have the configuration file and the systemd unit file created on every node. 
-6. Now it's time to start Patroni. You need the following commands on all nodes but not in parallel. Start with the `node1` first, wait for the service to come to live, and then proceed with the other nodes one-by-one, always waiting for them to sync with the primary node:
+6. Now it's time to start Patroni. You need the following commands on all nodes but not in parallel. Start with the `111pgsql` first, wait for the service to come to live, and then proceed with the other nodes one-by-one, always waiting for them to sync with the primary node:
 
 
     ```{.bash data-prompt="$"}
@@ -493,9 +491,9 @@ When Patroni starts, it initializes PostgreSQL (because the service is not curre
     + Cluster: cluster_1 (7440127629342136675) -----+----+-------+
     | Member | Host       | Role    | State     | TL | Lag in MB |
     +--------+------------+---------+-----------+----+-----------+
-    | node1  | 10.0.100.1 | Leader  | running   |  1 |           |
-    | node2  | 10.0.100.2 | Replica | streaming |  1 |         0 |
-    | node3  | 10.0.100.3 | Replica | streaming |  1 |         0 |
+    | 111pgsql  | 10.0.100.1 | Leader  | running   |  1 |           |
+    | 112pgsql  | 10.0.100.2 | Replica | streaming |  1 |         0 |
+    | 113pgsql  | 10.0.100.3 | Replica | streaming |  1 |         0 |
     +--------+------------+---------+-----------+----+-----------+
     ```
 
@@ -520,7 +518,7 @@ HAproxy is the load balancer and the single point of entry to your PostgreSQL cl
 
 This way, a client application doesn’t know what node in the underlying cluster is the current primary. HAProxy sends connections to a healthy node (as long as there is at least one healthy node available) and ensures that client application requests are never rejected. 
 
-1. Install HAProxy on the `HAProxy-demo` node:
+1. Install HAProxy on the `110pgsqlha` node:
 
     ```{.bash data-prompt="$"}
     $ sudo apt install percona-haproxy
@@ -552,9 +550,9 @@ This way, a client application doesn’t know what node in the underlying cluste
         option httpchk /primary 
         http-check expect status 200
         default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
-        server node1 node1:5432 maxconn 100 check port 8008
-        server node2 node2:5432 maxconn 100 check port 8008
-        server node3 node3:5432 maxconn 100 check port 8008
+        server 111pgsql 111pgsql:5432 maxconn 100 check port 8008
+        server 112pgsql 112pgsql:5432 maxconn 100 check port 8008
+        server 113pgsql 113pgsql:5432 maxconn 100 check port 8008
 
     listen standbys
         balance roundrobin
@@ -562,9 +560,9 @@ This way, a client application doesn’t know what node in the underlying cluste
         option httpchk /replica 
         http-check expect status 200
         default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
-        server node1 node1:5432 maxconn 100 check port 8008
-        server node2 node2:5432 maxconn 100 check port 8008
-        server node3 node3:5432 maxconn 100 check port 8008
+        server 111pgsql 111pgsql:5432 maxconn 100 check port 8008
+        server 112pgsql 112pgsql:5432 maxconn 100 check port 8008
+        server 113pgsql 113pgsql:5432 maxconn 100 check port 8008
     ```
 
 
