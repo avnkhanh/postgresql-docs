@@ -35,7 +35,7 @@ It's not necessary to have name resolution, but it makes the whole setup more re
     1. Set up the hostname for the node
 
         ```{.bash data-prompt="$"}
-        $ sudo hostnamectl set-hostname 111pgsql
+        sudo hostnamectl set-hostname 111pgsql
         ```
 
     2. Modify the `/etc/hosts` file to include the hostnames and IP addresses of the remaining nodes. Add the following at the end of the `/etc/hosts` file on all nodes:   
@@ -52,7 +52,7 @@ It's not necessary to have name resolution, but it makes the whole setup more re
     1. Set up the hostname for the node
 
         ```{.bash data-prompt="$"}
-        $ sudo hostnamectl set-hostname 112pgsql
+        sudo hostnamectl set-hostname 112pgsql
         ```
 
     2. Modify the `/etc/hosts` file to include the hostnames and IP addresses of the remaining nodes. Add the following at the end of the `/etc/hosts` file on all nodes:   
@@ -69,7 +69,7 @@ It's not necessary to have name resolution, but it makes the whole setup more re
     1. Set up the hostname for the node
 
         ```{.bash data-prompt="$"}
-        $ sudo hostnamectl set-hostname 113pgsql
+        sudo hostnamectl set-hostname 113pgsql
         ```
 
     2. Modify the `/etc/hosts` file to include the hostnames and IP addresses of the remaining nodes. Add the following at the end of the `/etc/hosts` file on all nodes:   
@@ -86,7 +86,7 @@ It's not necessary to have name resolution, but it makes the whole setup more re
     1. Set up the hostname for the node
 
         ```{.bash data-prompt="$"}
-        $ sudo hostnamectl set-hostname 110pgsqlha
+        sudo hostnamectl set-hostname 110pgsqlha
         ```
 
     2. Modify the `/etc/hosts` file. The HAProxy instance should have the name resolution for all the three nodes in its `/etc/hosts` file. Add the following lines at the end of the file:    
@@ -114,26 +114,26 @@ Run the following commands on `111pgsql`, `112pgsql` and `113pgsql`:
     * Enable the repository
 
         ```{.bash data-prompt="$"}
-        $ sudo percona-release setup ppg{{pgversion}}
+        sudo percona-release setup ppg{{pgversion}}
         ```   
 
     * Install Percona Distribution for PostgreSQL package
 
         ```{.bash data-prompt="$"}
-        $ sudo apt install percona-postgresql-{{pgversion}}
+        sudo apt install percona-postgresql-{{pgversion}}
         ```
 
 2. Install some Python and auxiliary packages to help with Patroni and etcd
     
     ```{.bash data-prompt="$"}
-    $ sudo apt install python3-pip python3-dev binutils
+    sudo apt install python3-pip python3-dev binutils
     ```
 
 3. Install etcd, Patroni, pgBackRest packages:
 
 
     ```{.bash data-prompt="$"}
-    $ sudo apt install percona-patroni \
+    sudo apt install percona-patroni \
     etcd etcd-server etcd-client \
     percona-pgbackrest
     ```
@@ -141,15 +141,16 @@ Run the following commands on `111pgsql`, `112pgsql` and `113pgsql`:
 4. Stop and disable all installed services:
     
     ```{.bash data-prompt="$"}
-    $ sudo systemctl stop {etcd,patroni,postgresql}
-    $ systemctl disable {etcd,patroni,postgresql}
+    sudo systemctl stop {etcd,patroni,postgresql}
+    systemctl disable {etcd,patroni,postgresql}
     ```
 
 5. Even though Patroni can use an existing Postgres installation, remove the data directory to force it to initialize a new Postgres cluster instance.
 
    ```{.bash data-prompt="$"}
-   $ sudo systemctl stop postgresql
-   $ sudo rm -rf /var/lib/postgresql/16/main
+   sudo systemctl stop postgresql
+   sudo rm -rf /var/lib/postgresql/16/main
+   sudo rm -rf /etc/postgresql/16/main
    ```
 
 ## Configure etcd distributed store  
@@ -218,9 +219,9 @@ We will configure and start all etcd nodes in parallel. This can be done either 
 2. Enable and start the `etcd` service on all nodes:
 
     ```{.bash data-prompt="$"}
-    $ sudo systemctl enable --now etcd
-    $ sudo systemctl start etcd
-    $ sudo systemctl status etcd
+    sudo systemctl enable --now etcd
+    sudo systemctl start etcd
+    sudo systemctl status etcd
     ```
 
     During the node start, etcd searches for other cluster nodes defined in the configuration. If the other nodes are not yet running, the start may fail by a quorum timeout. This is expected behavior. Try starting all nodes again at the same time for the etcd cluster to be created.
@@ -292,13 +293,13 @@ Run the following commands on all nodes. You can do this in parallel:
     * Node name:
 
        ```{.bash data-prompt="$"}
-       $ export NODE_NAME=`hostname -f`
+       export NODE_NAME=`hostname -f`
        ```
 
     * Node IP:
 
        ```{.bash data-prompt="$"}
-       $ export NODE_IP=`hostname -i | awk '{print $1}'`
+       export NODE_IP=`hostname -i | awk '{print $1}'`
        ```
    
     * Create variables to store the PATH:
@@ -455,7 +456,7 @@ Run the following commands on all nodes. You can do this in parallel:
 4. Make systemd aware of the new service:
 
     ```{.bash data-prompt="$"}
-    $ sudo systemctl daemon-reload
+    sudo systemctl daemon-reload
     ```
 
 5. Repeat steps 1-4 on the remaining nodes. In the end you must have the configuration file and the systemd unit file created on every node. 
@@ -463,8 +464,8 @@ Run the following commands on all nodes. You can do this in parallel:
 
 
     ```{.bash data-prompt="$"}
-    $ sudo systemctl enable --now patroni
-    $ sudo systemctl restart patroni
+    sudo systemctl enable --now patroni
+    sudo systemctl restart patroni
     ```
    
 When Patroni starts, it initializes PostgreSQL (because the service is not currently running and the data directory is empty) following the directives in the bootstrap section of the configuration file. 
@@ -472,7 +473,7 @@ When Patroni starts, it initializes PostgreSQL (because the service is not curre
 7. Check the service to see if there are errors:
 
     ```{.bash data-prompt="$"}
-    $ sudo journalctl -fu patroni
+    sudo journalctl -fu patroni
     ```
 
     A common error is Patroni complaining about the lack of proper entries in the pg_hba.conf file. If you see such errors, you must manually add or fix the entries in that file and then restart the service.
@@ -482,7 +483,7 @@ When Patroni starts, it initializes PostgreSQL (because the service is not curre
 8. Check the cluster. Run the following command on any node:
  
     ```{.bash data-prompt="$"}
-    $ patronictl -c /etc/patroni/patroni.yml list $SCOPE
+    patronictl -c /etc/patroni/patroni.yml list $SCOPE
     ```
 
     The output resembles the following:
@@ -500,7 +501,7 @@ When Patroni starts, it initializes PostgreSQL (because the service is not curre
 If Patroni has started properly, you should be able to locally connect to a PostgreSQL node using the following command:
 
 ```{.bash data-prompt="$"}
-$ sudo psql -U postgres
+sudo psql -U postgres
 ```
 
 The command output is the following:
@@ -521,7 +522,7 @@ This way, a client application doesn’t know what node in the underlying cluste
 1. Install HAProxy on the `110pgsqlha` node:
 
     ```{.bash data-prompt="$"}
-    $ sudo apt install percona-haproxy
+    sudo apt install percona-haproxy
     ```
 
 2. The HAProxy configuration file path is: `/etc/haproxy/haproxy.cfg`. Specify the following configuration in this file.
@@ -571,13 +572,13 @@ This way, a client application doesn’t know what node in the underlying cluste
 3. Restart HAProxy:
     
     ```{.bash data-prompt="$"}
-    $ sudo systemctl restart haproxy
+    sudo systemctl restart haproxy
     ```
 
 4. Check the HAProxy logs to see if there are any errors:
    
     ```{.bash data-prompt="$"}
-    $ sudo journalctl -u haproxy.service -n 100 -f
+    sudo journalctl -u haproxy.service -n 100 -f
     ```
 
 ## Next steps
