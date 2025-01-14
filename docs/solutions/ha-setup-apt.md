@@ -570,6 +570,7 @@ This way, a client application doesn’t know what node in the underlying cluste
         server 111pgsql 111pgsql:5432 maxconn 100 check port 8008
         server 112pgsql 112pgsql:5432 maxconn 100 check port 8008
         server 113pgsql 113pgsql:5432 maxconn 100 check port 8008
+    
     ```
 
 
